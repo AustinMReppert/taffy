@@ -97,7 +97,7 @@ struct NodeData {
     /// layout to avoid errors from rounding already-rounded values. See <https://github.com/DioxusLabs/taffy/issues/501>.
     pub(crate) unrounded_layout: Layout,
 
-    /// True if the layout output is new
+    /// True if the layout is new
     pub(crate) has_new_layout: bool,
 
     /// The final results of the layout computation.

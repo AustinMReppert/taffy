@@ -246,7 +246,7 @@ pub trait PrintTree: TraverseTree {
     fn get_debug_label(&self, node_id: NodeId) -> &'static str;
     /// Get a reference to the node's final layout
     fn get_final_layout(&self, node_id: NodeId) -> Layout;
-    /// Get has_nw_layout
+    /// Get has_new_layout
     fn get_has_new_layout(&self, node_id: NodeId) -> bool;
 }
 
