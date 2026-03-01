@@ -1240,8 +1240,8 @@ fn resolve_absolute_margin_and_positions(
 
     // If all three of 'left', 'width', and 'right' are 'auto': First set any 'auto' values for 'margin-left' and 'margin-right' to 0.
     if primary.is_none() && size.is_none() && secondary.is_none() {
-        computed_margin_primary = 0.0;
-        computed_margin_secondary = 0.0;
+        computed_margin_primary = margin_primary.unwrap_or(0.0);
+        computed_margin_secondary = margin_secondary.unwrap_or(0.0);
 
         // Then, if the 'direction' property of the element establishing the static-position containing block is 'ltr' set 'left' to the static position and apply rule number three below; otherwise, set 'right' to the static position and apply rule number one below.
         // Assume always ltr
@@ -1254,7 +1254,7 @@ fn resolve_absolute_margin_and_positions(
         let width = final_size;
 
         //  'right' = width of containing block - ('left' + 'margin-left' + 'border-left-width' + 'padding-left' + 'width' + 'padding-right' + 'border-right-width' + 'margin-right')
-        computed_secondary = area_width - (computed_primary + margin_primary.unwrap() + width)
+        computed_secondary = area_width - (computed_primary + computed_margin_primary + computed_margin_secondary + width)
     }
     // If none of the three is 'auto'
     else if primary.is_some() && size.is_some() && secondary.is_some() {
