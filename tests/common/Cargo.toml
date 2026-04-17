@@ -10,3 +10,4 @@ publish = false
 
 [dependencies]
 taffy = { path = "../.." }
+image = "0.25.10"

@@ -166,10 +166,17 @@ pub trait CoreStyle {
     fn padding(&self) -> Rect<LengthPercentage> {
         Style::<Self::CustomIdent>::DEFAULT.padding
     }
+
     /// How large should the border be on each side?
     #[inline(always)]
     fn border(&self) -> Rect<LengthPercentage> {
         Style::<Self::CustomIdent>::DEFAULT.border
+    }
+
+    /// Determines if the element has replaced content such as an image.
+    #[inline(always)]
+    fn replaced(&self) -> bool {
+        panic!("fff");
     }
 }
 
@@ -579,6 +586,9 @@ pub struct Style<S: CheapCloneStr = DefaultCheapStr> {
     /// Defines which column in the grid the item should start and end at
     #[cfg(feature = "grid")]
     pub grid_column: Line<GridPlacement<S>>,
+
+    /// Determines if the element has replaced content such as an image.
+    pub replaced: bool,
 }
 
 impl<S: CheapCloneStr> Style<S> {
@@ -655,6 +665,7 @@ impl<S: CheapCloneStr> Style<S> {
         grid_row: Line { start: GridPlacement::<S>::Auto, end: GridPlacement::<S>::Auto },
         #[cfg(feature = "grid")]
         grid_column: Line { start: GridPlacement::<S>::Auto, end: GridPlacement::<S>::Auto },
+        replaced: false,
     };
 }
 
@@ -735,6 +746,9 @@ impl<S: CheapCloneStr> CoreStyle for Style<S> {
     fn border(&self) -> Rect<LengthPercentage> {
         self.border
     }
+    fn replaced(&self) -> bool {
+        self.replaced
+    }
 }
 
 impl<T: CoreStyle> CoreStyle for &'_ T {
@@ -803,6 +817,10 @@ impl<T: CoreStyle> CoreStyle for &'_ T {
     #[inline(always)]
     fn border(&self) -> Rect<LengthPercentage> {
         (*self).border()
+    }
+
+    fn replaced(&self) -> bool {
+        (*self).replaced()
     }
 }
 
@@ -1257,6 +1275,7 @@ mod tests {
             grid_row: Line { start: GridPlacement::Auto, end: GridPlacement::Auto },
             #[cfg(feature = "grid")]
             grid_column: Line { start: GridPlacement::Auto, end: GridPlacement::Auto },
+            replaced: false,
         };
 
         assert_eq!(Style::DEFAULT, Style::<DefaultCheapStr>::default());
@@ -1327,12 +1346,12 @@ mod tests {
         assert_type_size::<GridTemplateComponent<String>>(56);
         assert_type_size::<GridPlacement<String>>(32);
         assert_type_size::<Line<GridPlacement<String>>>(64);
-        assert_type_size::<Style<String>>(536);
+        assert_type_size::<Style<String>>(544);
 
         // String-type dependent (Arc<str>)
         assert_type_size::<GridTemplateComponent<Arc<str>>>(56);
         assert_type_size::<GridPlacement<Arc<str>>>(24);
         assert_type_size::<Line<GridPlacement<Arc<str>>>>(48);
-        assert_type_size::<Style<Arc<str>>>(504);
+        assert_type_size::<Style<Arc<str>>>(512);
     }
 }

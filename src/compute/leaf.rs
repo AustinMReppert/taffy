@@ -19,7 +19,7 @@ pub fn compute_leaf_layout<MeasureFunction>(
     measure_function: MeasureFunction,
 ) -> LayoutOutput
 where
-    MeasureFunction: FnOnce(Size<Option<f32>>, Size<AvailableSpace>) -> Size<f32>,
+    MeasureFunction: FnOnce(Size<Option<f32>>, Size<AvailableSpace>, bool) -> Size<f32>,
 {
     let LayoutInput { known_dimensions, parent_size, available_space, sizing_mode, run_mode, .. } = inputs;
 
@@ -139,6 +139,7 @@ where
             RunMode::PerformHiddenLayout => unreachable!(),
         },
         available_space,
+        style.replaced(),
     );
     let clamped_size = known_dimensions
         .or(node_size)

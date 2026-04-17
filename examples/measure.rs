@@ -40,8 +40,10 @@ fn main() -> Result<(), taffy::TaffyError> {
         NodeContext::Text(TextContext { text_content: LOREM_IPSUM.into(), writing_mode: WritingMode::Horizontal }),
     )?;
 
-    let image_node = taffy
-        .new_leaf_with_context(Style::default(), NodeContext::Image(ImageContext { width: 400.0, height: 300.0 }))?;
+    let image_style = Style { replaced: true, ..Style::default() };
+
+    let image_node =
+        taffy.new_leaf_with_context(image_style, NodeContext::Image(ImageContext { width: 400.0, height: 300.0 }))?;
 
     let root = taffy.new_with_children(
         Style {

@@ -1226,6 +1226,26 @@ mod block {
     }
 
     #[test]
+    fn block_absolute_replaced_intrinsic_size__border_box_ltr() {
+        crate::run_xml_test("block", "block_absolute_replaced_intrinsic_size__border_box_ltr");
+    }
+
+    #[test]
+    fn block_absolute_replaced_intrinsic_size__content_box_ltr() {
+        crate::run_xml_test("block", "block_absolute_replaced_intrinsic_size__content_box_ltr");
+    }
+
+    #[test]
+    fn block_absolute_replaced_intrinsic_size__border_box_rtl() {
+        crate::run_xml_test("block", "block_absolute_replaced_intrinsic_size__border_box_rtl");
+    }
+
+    #[test]
+    fn block_absolute_replaced_intrinsic_size__content_box_rtl() {
+        crate::run_xml_test("block", "block_absolute_replaced_intrinsic_size__content_box_rtl");
+    }
+
+    #[test]
     fn block_absolute_resolved_insets__border_box_ltr() {
         crate::run_xml_test("block", "block_absolute_resolved_insets__border_box_ltr");
     }

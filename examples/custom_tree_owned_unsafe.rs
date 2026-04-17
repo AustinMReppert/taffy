@@ -162,7 +162,7 @@ impl LayoutPartialTree for StatelessLayoutTree {
                     inputs,
                     &node.style,
                     |val, basis| tree.resolve_calc_value(val, basis),
-                    |known_dimensions, available_space| {
+                    |known_dimensions, available_space, _replaced| {
                         text_measure_function(
                             known_dimensions,
                             available_space,
@@ -175,7 +175,7 @@ impl LayoutPartialTree for StatelessLayoutTree {
                     inputs,
                     &node.style,
                     |val, basis| tree.resolve_calc_value(val, basis),
-                    |known_dimensions, _available_space| {
+                    |known_dimensions, _available_space, _replaced| {
                         image_measure_function(known_dimensions, node.image_data.as_ref().unwrap())
                     },
                 ),

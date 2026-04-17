@@ -162,11 +162,14 @@ fn construct_tree(
         let writing_mode = parse_or_default(input.attribute("writing-mode"));
 
         let tnode = tree.new_leaf(build_style(input)).unwrap();
-        tree.set_node_context(
-            tnode,
-            text_content.map(|text_content| TestNodeContext::ahem_text(text_content.to_string(), writing_mode)),
-        )
-        .unwrap();
+        let node_context = if input.has_tag_name("img") {
+            Some(TestNodeContext::image(
+                input.attribute("src").expect("Image nodes must have a src attribute").to_string(),
+            ))
+        } else {
+            text_content.map(|text_content| TestNodeContext::ahem_text(text_content.to_string(), writing_mode))
+        };
+        tree.set_node_context(tnode, node_context).unwrap();
 
         if let Some(parent) = parent {
             tree.add_child(parent, tnode).unwrap();
@@ -215,6 +218,8 @@ fn build_expectations(xnode: roxmltree::Node, node_id: NodeId) -> OutputNode {
 }
 
 fn build_style<S: CheapCloneStr>(xnode: roxmltree::Node) -> taffy::Style<S> {
+    let replaced = xnode.has_tag_name("img");
+
     let grid_template_rows: GridTemplateTracks<S, GridTemplateComponent<S>> =
         parse_or_default(xnode.attribute("grid-template-rows"));
     let grid_template_columns: GridTemplateTracks<S, GridTemplateComponent<S>> =
@@ -313,5 +318,6 @@ fn build_style<S: CheapCloneStr>(xnode: roxmltree::Node) -> taffy::Style<S> {
             start: parse_or_default(xnode.attribute("grid-column-start")),
             end: parse_or_default(xnode.attribute("grid-column-end")),
         },
+        replaced,
     }
 }

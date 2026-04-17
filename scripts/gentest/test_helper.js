@@ -201,8 +201,13 @@ function describeElement(e) {
   let parentBoundingRect = e.parentNode.getBoundingClientRect();
 
   const computedStyle = getComputedStyle(e);
+  const isImg = e instanceof HTMLImageElement;
 
   return {
+    nodeName: e.tagName.toLowerCase(),
+    ...(isImg && {
+      src: e.getAttribute("src"),
+    }),
     style: {
       display: parseEnum(e.style.display),
       boxSizing: parseEnum(computedStyle.boxSizing),

@@ -1138,26 +1138,35 @@ fn perform_absolute_layout_on_absolute_children(
             .maybe_apply_aspect_ratio(aspect_ratio)
             .maybe_add(box_sizing_adjustment);
 
+        let replaced = child_style.replaced();
+
         let mut known_dimensions = style_size.maybe_clamp(min_size, max_size);
 
         drop(child_style);
 
-        // Fill in width from left/right and reapply aspect ratio if:
-        //   - Width is not already known
-        //   - Item has both left and right inset properties set
-        if let (None, Some(left), Some(right)) = (known_dimensions.width, resolved_inset.left, resolved_inset.right) {
-            let new_width_raw = area_width.maybe_sub(margin.left).maybe_sub(margin.right) - left - right;
-            known_dimensions.width = Some(f32_max(new_width_raw, 0.0));
-            known_dimensions = known_dimensions.maybe_apply_aspect_ratio(aspect_ratio).maybe_clamp(min_size, max_size);
-        }
+        if !replaced {
+            // Fill in width from left/right and reapply aspect ratio if:
+            //   - Width is not already known
+            //   - Item has both left and right inset properties set
+            if let (None, Some(left), Some(right)) = (known_dimensions.width, resolved_inset.left, resolved_inset.right)
+            {
+                let new_width_raw = area_width.maybe_sub(margin.left).maybe_sub(margin.right) - left - right;
+                known_dimensions.width = Some(f32_max(new_width_raw, 0.0));
+                known_dimensions =
+                    known_dimensions.maybe_apply_aspect_ratio(aspect_ratio).maybe_clamp(min_size, max_size);
+            }
 
-        // Fill in height from top/bottom and reapply aspect ratio if:
-        //   - Height is not already known
-        //   - Item has both top and bottom inset properties set
-        if let (None, Some(top), Some(bottom)) = (known_dimensions.height, resolved_inset.top, resolved_inset.bottom) {
-            let new_height_raw = area_height.maybe_sub(margin.top).maybe_sub(margin.bottom) - top - bottom;
-            known_dimensions.height = Some(f32_max(new_height_raw, 0.0));
-            known_dimensions = known_dimensions.maybe_apply_aspect_ratio(aspect_ratio).maybe_clamp(min_size, max_size);
+            // Fill in height from top/bottom and reapply aspect ratio if:
+            //   - Height is not already known
+            //   - Item has both top and bottom inset properties set
+            if let (None, Some(top), Some(bottom)) =
+                (known_dimensions.height, resolved_inset.top, resolved_inset.bottom)
+            {
+                let new_height_raw = area_height.maybe_sub(margin.top).maybe_sub(margin.bottom) - top - bottom;
+                known_dimensions.height = Some(f32_max(new_height_raw, 0.0));
+                known_dimensions =
+                    known_dimensions.maybe_apply_aspect_ratio(aspect_ratio).maybe_clamp(min_size, max_size);
+            }
         }
 
         let measured_size = tree.measure_child_size_both(
@@ -1172,28 +1181,58 @@ fn perform_absolute_layout_on_absolute_children(
             Line::FALSE,
         );
 
-        let resolved_box_properties_horizontal = resolve_absolutely_positioned_non_replaced_box_properties_horizontal(
-            known_dimensions.width,
-            area_width,
-            resolved_inset.horizontal_components(),
-            measured_size.width,
-            margin.horizontal_components(),
-            item.static_position.x,
-            direction,
-            min_size.width.unwrap_or_default(),
-            max_size.width,
-        );
+        let resolved_box_properties_horizontal = if !replaced {
+            resolve_absolutely_positioned_non_replaced_box_properties_horizontal(
+                known_dimensions.width,
+                area_width,
+                resolved_inset.horizontal_components(),
+                measured_size.width,
+                margin.horizontal_components(),
+                item.static_position.x,
+                direction,
+                min_size.width.unwrap_or_default(),
+                max_size.width,
+            )
+        } else {
+            resolve_absolutely_positioned_replaced_box_properties_horizontal(
+                known_dimensions.width,
+                area_width,
+                resolved_inset.horizontal_components(),
+                measured_size.width,
+                margin.horizontal_components(),
+                item.static_position.x,
+                direction,
+                min_size.width.unwrap_or_default(),
+                max_size.width,
+            )
+        };
 
-        let resolved_box_properties_vertical = resolve_absolutely_positioned_non_replaced_box_properties_vertical(
-            known_dimensions.height,
-            area_height,
-            resolved_inset.vertical_components(),
-            measured_size.height,
-            margin.vertical_components(),
-            item.static_position.y,
-            min_size.height.unwrap_or(0.0),
-            max_size.height,
-        );
+        let resolved_box_properties_vertical = if !replaced {
+            resolve_absolutely_positioned_non_replaced_box_properties_vertical(
+                known_dimensions.height,
+                area_height,
+                resolved_inset.vertical_components(),
+                measured_size.height,
+                margin.vertical_components(),
+                item.static_position.y,
+                min_size.height.unwrap_or(0.0),
+                max_size.height,
+            )
+        } else {
+            resolve_absolutely_positioned_replaced_box_properties_vertical(
+                known_dimensions.width,
+                resolved_box_properties_horizontal.size,
+                measured_size.width,
+                known_dimensions.height,
+                area_height,
+                resolved_inset.vertical_components(),
+                measured_size.height,
+                margin.vertical_components(),
+                item.static_position.y,
+                min_size.height.unwrap_or(0.0),
+                max_size.height,
+            )
+        };
 
         let final_size = Size::new(resolved_box_properties_horizontal.size, resolved_box_properties_vertical.size)
             .map(Option::unwrap_or_default);
@@ -1264,6 +1303,7 @@ fn perform_absolute_layout_on_absolute_children(
 
     absolute_content_size
 }
+
 /// Compute the left, margin-left, width, margin-right, and right for non-replaced absolutely positioned boxes.
 #[inline]
 #[allow(clippy::too_many_arguments)]
@@ -1450,6 +1490,327 @@ fn resolve_absolutely_positioned_non_replaced_box_properties_horizontal(
     } else {
         // 1. The tentative used width is calculated (without 'min-width' and 'max-width') following the rules under "Calculating widths and margins" above.
         ResolvedBoxProperties { size: computed_width, inset: computed_inset, margin: computed_margin }
+    }
+}
+
+/// Compute the left, margin-left, width, margin-right, and right for replaced absolutely positioned boxes.
+#[inline]
+#[allow(clippy::too_many_arguments)]
+fn resolve_absolutely_positioned_replaced_box_properties_horizontal(
+    width: Option<f32>,
+    width_of_containing_block: f32,
+    inset: Line<Option<f32>>,
+    content_width: f32,
+    margin: Line<Option<f32>>,
+    static_position: f32,
+    direction: Direction,
+    min_width: f32,
+    max_width: Option<f32>,
+) -> ResolvedBoxProperties {
+    // https://www.w3.org/TR/CSS2/visudet.html#abs-replaced-width
+    let mut computed_margin = margin.clone();
+    let mut computed_inset = inset.clone();
+
+    // The constraint that determines the used values for these elements is:
+    // 'left' + 'margin-left' + 'border-left-width' + 'padding-left' + 'width' + 'padding-right' +
+    // 'border-right-width' + 'margin-right' + 'right' = width of containing block
+
+    // 1.0
+    // The used value of 'width' is determined as for inline replaced elements.
+    // If 'margin-left' or 'margin-right' is specified as 'auto' its used value is determined by the rules below.
+    let computed_width = width.unwrap_or(content_width);
+
+    // 2.0
+    // If both 'left' and 'right' have the value 'auto', then if the 'direction' property of the
+    // element establishing the static-position containing block is 'ltr', set 'left' to the static
+    // position; else if 'direction' is 'rtl', set 'right' to the static position.
+    if inset.start.is_none() && inset.end.is_none() {
+        match direction {
+            Direction::Ltr => {
+                computed_inset.start = Some(static_position);
+            }
+            Direction::Rtl => {
+                let static_position = width_of_containing_block - static_position;
+                computed_inset.end = Some(static_position);
+            }
+        }
+    }
+
+    // 3.0
+    // If 'left' or 'right' are 'auto', replace any 'auto' on 'margin-left' or 'margin-right' with '0'.
+    if computed_inset.start.is_none() || computed_inset.end.is_none() {
+        if computed_margin.start.is_none() {
+            computed_margin.start = Some(0.0);
+        }
+        if computed_margin.end.is_none() {
+            computed_margin.end = Some(0.0);
+        }
+    }
+
+    // 4.0
+    // If at this point both 'margin-left' and 'margin-right' are still 'auto', solve the equation
+    // under the extra constraint that the two margins must get equal values,
+    // unless this would make them negative, in which case when the direction of the containing
+    // block is 'ltr' ('rtl'), set 'margin-left' ('margin-right') to zero and solve
+    // for 'margin-right' ('margin-left').
+    if computed_margin.start.is_none() && computed_margin.end.is_none() {
+        let margin =
+            (width_of_containing_block - (computed_width + computed_inset.map(Option::unwrap_or_default).sum())) / 2.0;
+
+        if margin >= 0.0 {
+            computed_margin.start = Some(margin);
+            computed_margin.end = Some(margin);
+        } else {
+            let margin =
+                width_of_containing_block - (computed_width + computed_inset.map(Option::unwrap_or_default).sum());
+            match direction {
+                Direction::Ltr => {
+                    computed_margin.start = Some(0.0);
+                    computed_margin.end = Some(margin);
+                }
+                Direction::Rtl => {
+                    computed_margin.end = Some(0.0);
+                    computed_margin.start = Some(margin);
+                }
+            }
+        }
+    }
+
+    // 5.0
+    // If at this point there is an 'auto' left, solve the equation for that value.
+    if computed_margin.start.is_none() {
+        computed_margin.start = Some(
+            width_of_containing_block
+                - (computed_inset.map(Option::unwrap_or_default).sum()
+                    + computed_width
+                    + computed_margin.end.unwrap_or(0.0)),
+        );
+    } else if computed_margin.end.is_none() {
+        computed_margin.end = Some(
+            width_of_containing_block
+                - (computed_inset.map(Option::unwrap_or_default).sum()
+                    + computed_margin.start.unwrap_or(0.0)
+                    + computed_width),
+        );
+    } else if computed_inset.start.is_none() {
+        computed_inset.start = Some(
+            width_of_containing_block
+                - (computed_width
+                    + computed_margin.map(Option::unwrap_or_default).sum()
+                    + computed_inset.end.unwrap_or(0.0)),
+        );
+    } else if computed_inset.end.is_none() {
+        computed_inset.end = Some(
+            width_of_containing_block
+                - (computed_inset.start.unwrap_or(0.0)
+                    + computed_margin.map(Option::unwrap_or_default).sum()
+                    + computed_width),
+        );
+    }
+
+    let mut computed_inset = computed_inset.map(Option::unwrap_or_default);
+
+    let computed_margin = computed_margin.map(Option::unwrap_or_default);
+    // 6.0
+    // If at this point the values are over-constrained, ignore the value for either 'left' (in case
+    // the 'direction' property of the containing block is 'rtl') or 'right' (in case
+    // 'direction' is 'ltr') and solve for that value.
+    if computed_margin.sum() + computed_inset.sum() + computed_width != width_of_containing_block {
+        match direction {
+            Direction::Ltr => {
+                computed_inset.end =
+                    width_of_containing_block - (computed_width + computed_margin.sum() + computed_inset.start);
+            }
+            Direction::Rtl => {
+                computed_inset.start =
+                    width_of_containing_block - (computed_width + computed_margin.sum() + computed_inset.end);
+            }
+        }
+    }
+
+    // 10.4 Minimum and maximum widths:
+    if max_width.is_some() && computed_width > max_width.unwrap() {
+        // 2.0
+        // If the tentative used width is greater than 'max-width', the rules above are applied again,
+        // but this time using the computed value of 'max-width' as the computed value for 'width'.
+        resolve_absolutely_positioned_replaced_box_properties_horizontal(
+            max_width,
+            width_of_containing_block,
+            inset,
+            content_width,
+            margin,
+            static_position,
+            direction,
+            min_width,
+            None,
+        )
+    } else if computed_width < min_width {
+        // 3.0
+        // If the resulting width is smaller than 'min-width', the rules above are applied again,
+        // but this time using the value of 'min-width' as the computed value for 'width'.
+        resolve_absolutely_positioned_replaced_box_properties_horizontal(
+            Some(min_width),
+            width_of_containing_block,
+            inset,
+            content_width,
+            margin,
+            static_position,
+            direction,
+            min_width,
+            max_width,
+        )
+    } else {
+        // 1. The tentative used width is calculated (without 'min-width' and 'max-width') following the rules under "Calculating widths and margins" above.
+        ResolvedBoxProperties { size: computed_width, inset: computed_inset, margin: computed_margin }
+    }
+}
+
+/// Compute the left, margin-left, width, margin-right, and right for replaced absolutely positioned boxes.
+#[inline]
+#[allow(clippy::too_many_arguments)]
+fn resolve_absolutely_positioned_replaced_box_properties_vertical(
+    width: Option<f32>,
+    computed_width: f32,
+    content_width: f32,
+    height: Option<f32>,
+    height_of_containing_block: f32,
+    inset: Line<Option<f32>>,
+    content_height: f32,
+    margin: Line<Option<f32>>,
+    static_position: f32,
+    min_height: f32,
+    max_height: Option<f32>,
+) -> ResolvedBoxProperties {
+    // https://www.w3.org/TR/CSS2/visudet.html#abs-replaced-width
+    let mut computed_margin = margin.clone();
+    let mut computed_inset = inset.clone();
+
+    // The constraint that determines the used values for these elements is:
+    // 'top' + 'margin-top' + 'border-top-width' + 'padding-top' + 'height' + 'padding-bottom' +
+    // 'border-bottom-width' + 'margin-bottom' + 'bottom' = height of containing block
+
+    // 1.0
+    // The used value of 'height' is determined as for inline replaced elements. If 'margin-top'
+    // or 'margin-bottom' is specified as 'auto' its used value is determined by the rules below.
+    let computed_height = height.unwrap_or_else(|| {
+        if width.is_none() {
+            content_height
+        } else {
+            let intrinsic_ratio = content_width / content_height;
+            computed_width / intrinsic_ratio
+        }
+    });
+
+    // 2.0
+    // If both 'top' and 'bottom' have the value 'auto', replace 'top' with the element's static position.
+    if inset.start.is_none() && inset.end.is_none() {
+        computed_inset.start = Some(static_position);
+    }
+
+    // 3.0
+    // If 'bottom' is 'auto', replace any 'auto' on 'margin-top' or 'margin-bottom' with '0'.
+    if computed_inset.start.is_none() || computed_inset.end.is_none() {
+        if computed_margin.start.is_none() {
+            computed_margin.start = Some(0.0);
+        }
+        if computed_margin.end.is_none() {
+            computed_margin.end = Some(0.0);
+        }
+    }
+
+    // 4.0
+    // If at this point both 'margin-top' and 'margin-bottom' are still 'auto', solve the equation
+    // under the extra constraint that the two margins must get equal values.
+    if computed_margin.start.is_none() && computed_margin.end.is_none() {
+        let margin = (height_of_containing_block
+            - (computed_height + computed_inset.map(Option::unwrap_or_default).sum()))
+            / 2.0;
+
+        computed_margin.start = Some(margin);
+        computed_margin.end = Some(margin);
+    }
+
+    // 5.0
+    // If at this point there is an 'auto' left, solve the equation for that value.
+    if computed_margin.start.is_none() {
+        computed_margin.start = Some(
+            height_of_containing_block
+                - (computed_inset.map(Option::unwrap_or_default).sum()
+                    + computed_height
+                    + computed_margin.end.unwrap_or(0.0)),
+        );
+    } else if computed_margin.end.is_none() {
+        computed_margin.end = Some(
+            height_of_containing_block
+                - (computed_inset.map(Option::unwrap_or_default).sum()
+                    + computed_margin.start.unwrap_or(0.0)
+                    + computed_height),
+        );
+    } else if computed_inset.start.is_none() {
+        computed_inset.start = Some(
+            height_of_containing_block
+                - (computed_height
+                    + computed_margin.map(Option::unwrap_or_default).sum()
+                    + computed_inset.end.unwrap_or(0.0)),
+        );
+    } else if computed_inset.end.is_none() {
+        computed_inset.end = Some(
+            height_of_containing_block
+                - (computed_inset.start.unwrap_or(0.0)
+                    + computed_margin.map(Option::unwrap_or_default).sum()
+                    + computed_height),
+        );
+    }
+
+    let mut computed_inset = computed_inset.map(Option::unwrap_or_default);
+
+    let computed_margin = computed_margin.map(Option::unwrap_or_default);
+    // 6.0
+    // If at this point the values are over-constrained, ignore the value for 'bottom' and solve for that value.
+    if computed_margin.sum() + computed_inset.sum() + computed_height != height_of_containing_block {
+        computed_inset.start =
+            height_of_containing_block - (computed_height + computed_margin.sum() + computed_inset.end);
+    }
+
+    // 10.4 Minimum and maximum heights:
+    if max_height.is_some() && computed_height > max_height.unwrap() {
+        // 2.0
+        // If the tentative used height is greater than 'max-height', the rules above are applied again,
+        // but this time using the computed value of 'max-height' as the computed value for 'height'.
+        resolve_absolutely_positioned_replaced_box_properties_vertical(
+            width,
+            computed_width,
+            content_width,
+            max_height,
+            height_of_containing_block,
+            inset,
+            content_height,
+            margin,
+            static_position,
+            min_height,
+            None,
+        )
+    } else if computed_height < min_height {
+        // 3.0
+        // If the resulting height is smaller than 'min-height', the rules above are applied again,
+        // but this time using the value of 'min-height' as the computed value for 'height'.
+        resolve_absolutely_positioned_replaced_box_properties_vertical(
+            width,
+            computed_width,
+            content_width,
+            Some(min_height),
+            height_of_containing_block,
+            inset,
+            content_height,
+            margin,
+            static_position,
+            min_height,
+            max_height,
+        )
+    } else {
+        // 1. The tentative used height is calculated (without 'min-height' and 'max-height')
+        // following the rules under "Calculating heights and margins" above.
+        ResolvedBoxProperties { size: computed_height, inset: computed_inset, margin: computed_margin }
     }
 }
 

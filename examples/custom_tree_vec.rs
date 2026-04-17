@@ -170,7 +170,7 @@ impl taffy::LayoutPartialTree for Tree {
                     inputs,
                     &node.style,
                     |_val, _basis| 0.0,
-                    |known_dimensions, available_space| {
+                    |known_dimensions, available_space, _replaced| {
                         text_measure_function(
                             known_dimensions,
                             available_space,
@@ -183,7 +183,7 @@ impl taffy::LayoutPartialTree for Tree {
                     inputs,
                     &node.style,
                     |_val, _basis| 0.0,
-                    |known_dimensions, _available_space| {
+                    |known_dimensions, _available_space, _replaced| {
                         image_measure_function(known_dimensions, node.image_data.as_ref().unwrap())
                     },
                 ),

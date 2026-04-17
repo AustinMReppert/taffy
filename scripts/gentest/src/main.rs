@@ -69,7 +69,6 @@ async fn main() {
         .iter()
         .flat_map(|(name, fixture_path, description)| {
             debug!("generating test contents for {}", &name);
-
             let border_box_ltr_test =
                 generate_test(format!("{name}__border_box_ltr"), &description["borderBoxLtrData"]);
             let content_box_ltr_test =
@@ -259,8 +258,14 @@ fn generate_node(w: &mut XmlWriter, node: &Value) {
     }
 
     // Handle text/leaf node case
+    let node_name = get_string_value(&node["nodeName"]).unwrap_or("div");
     let text_content = get_string_value(&node["textContent"]);
-    if text_content.is_some() {
+    if node_name == "img" {
+        w.start_element("img");
+        if let Some(src) = get_string_value(&node["src"]) {
+            w.write_attribute("src", src);
+        }
+    } else if text_content.is_some() {
         w.start_element("text");
     } else {
         w.start_element("div");

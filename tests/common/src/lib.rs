@@ -1,3 +1,4 @@
+use std::path::Path;
 use taffy::{AvailableSpace, NodeId, Size, Style, TaffyTree};
 
 /// Creates a `TaffyTree` that uses `TestNodeContext`. The purpose of this function is
@@ -44,6 +45,11 @@ impl TestNodeContext {
         let data = AhemTextMeasureData { text_content, writing_mode };
         Self::new(TestMeasureData::AhemText(data))
     }
+
+    /// Create a `TestNodeContext` for a node with image data.
+    pub const fn image(path: String) -> Self {
+        Self::new(TestMeasureData::Image(path))
+    }
 }
 
 /// The measurement data for the node
@@ -57,6 +63,8 @@ pub enum TestMeasureData {
     AspectRatio(AspectRatioMeasureData),
     /// A node with text using the Ahem font
     AhemText(AhemTextMeasureData),
+    /// An image node.
+    Image(String),
 }
 
 /// A measure function for tests that works with `TestNodeContext`
@@ -81,12 +89,34 @@ pub fn test_measure_function(
         TestMeasureData::Fixed(size) => *size,
         TestMeasureData::AspectRatio(data) => data.measure(known_dimensions),
         TestMeasureData::AhemText(data) => data.measure(known_dimensions, available_space),
+        TestMeasureData::Image(path) => measure_image(&path, known_dimensions, available_space),
     };
 
     Size {
         width: known_dimensions.width.unwrap_or(compute_size.width),
         height: known_dimensions.height.unwrap_or(compute_size.height),
     }
+}
+
+fn measure_image(
+    path: &str,
+    _known_dimensions: Size<Option<f32>>,
+    _available_space: Size<AvailableSpace>,
+) -> Size<f32> {
+    let filename = Path::new(path).file_name().expect("Invalid image path");
+    let full_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("test_fixtures")
+        .join("assets")
+        .join(filename);
+    println!("{}", full_path.display());
+
+    let image = image::open(full_path).expect("Failed to open image");
+
+    Size { width: image.width() as f32, height: image.height() as f32 }
 }
 
 /// Measure data for nodes that returns results based on an intrinsic aspect ratio

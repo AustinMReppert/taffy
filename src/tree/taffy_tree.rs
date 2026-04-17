@@ -320,7 +320,7 @@ where
                     let style = &tree.taffy.nodes[node_key].style;
                     let has_context = tree.taffy.nodes[node_key].has_context;
                     let node_context = has_context.then(|| tree.taffy.node_context_data.get_mut(node_key)).flatten();
-                    let measure_function = |known_dimensions, available_space| {
+                    let measure_function = |known_dimensions, available_space, _replaced| {
                         (tree.measure_function)(known_dimensions, available_space, node_id, node_context, style)
                     };
                     compute_leaf_layout(inputs, style, |_, _| 0.0, measure_function)
