@@ -75,11 +75,16 @@ pub fn test_measure_function(
     context: Option<&mut TestNodeContext>,
     _style: &Style,
 ) -> Size<f32> {
+    let Some(context) = context else { return known_dimensions.map(|d| d.unwrap_or(0.0)) };
+
+    match &context.measure_data {
+        TestMeasureData::Image(path) => return measure_image(&path, known_dimensions, available_space),
+        _ => {}
+    };
+
     if let Size { width: Some(width), height: Some(height) } = known_dimensions {
         return Size { width, height };
     }
-
-    let Some(context) = context else { return known_dimensions.map(|d| d.unwrap_or(0.0)) };
 
     // Increment count
     context.count += 1;
@@ -89,7 +94,7 @@ pub fn test_measure_function(
         TestMeasureData::Fixed(size) => *size,
         TestMeasureData::AspectRatio(data) => data.measure(known_dimensions),
         TestMeasureData::AhemText(data) => data.measure(known_dimensions, available_space),
-        TestMeasureData::Image(path) => measure_image(&path, known_dimensions, available_space),
+        TestMeasureData::Image(_) => unreachable!(),
     };
 
     Size {
@@ -115,7 +120,7 @@ fn measure_image(
     println!("{}", full_path.display());
 
     let image = image::open(full_path).expect("Failed to open image");
-
+    println!("Image size: {} x {}", image.width(), image.height());
     Size { width: image.width() as f32, height: image.height() as f32 }
 }
 

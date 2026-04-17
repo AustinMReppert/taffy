@@ -328,6 +328,17 @@ where
             }
         })
     }
+
+    fn measure_intrinsic_size(&mut self, node_id: NodeId) -> Size<f32> {
+        let node_key = node_id.into();
+        let style = &self.taffy.nodes[node_key].style;
+        let has_context = self.taffy.nodes[node_key].has_context;
+        let node_context = has_context.then(|| self.taffy.node_context_data.get_mut(node_key)).flatten();
+        let measure_function = |known_dimensions, available_space| {
+            (self.measure_function)(known_dimensions, available_space, node_id, node_context, style)
+        };
+        measure_function(Size::NONE, Size::<AvailableSpace>::zero())
+    }
 }
 
 // TraversePartialTree impl for TaffyView
@@ -400,6 +411,11 @@ where
             #[cfg(feature = "block_layout")]
             None,
         )
+    }
+
+    #[inline]
+    fn measure_intrinsic_size(&mut self, node_id: NodeId) -> Size<f32> {
+        self.measure_intrinsic_size(node_id)
     }
 }
 

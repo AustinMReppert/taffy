@@ -1,0 +1,17 @@
+<test name="block_absolute_replaced_height_inset_centering__border_box_ltr" use-rounding="true">
+  <viewport width="max-content" height="max-content"/>
+  <input>
+    <div display="block" direction="ltr" width="200px" height="200px">
+      <img src="../assets/blue15x15.png" direction="ltr" position="absolute" top="96px" left="0px" bottom="96px" right="0px"/>
+      <text direction="ltr" position="absolute" width="15px" height="15px" top="96px" left="15px">
+        
+      </text>
+    </div>
+  </input>
+  <expectations>
+    <node x="0" y="0" width="200" height="200">
+      <node x="0" y="96" width="15" height="15"/>
+      <node x="15" y="96" width="15" height="15"/>
+    </node>
+  </expectations>
+</test>

@@ -184,6 +184,10 @@ impl taffy::LayoutPartialTree for Node {
             }
         })
     }
+
+    fn measure_intrinsic_size(&mut self, _node_id: NodeId) -> Size<f32> {
+        todo!()
+    }
 }
 
 impl CacheTree for Node {
