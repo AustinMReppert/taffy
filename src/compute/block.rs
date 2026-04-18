@@ -1197,7 +1197,6 @@ fn perform_absolute_layout_on_absolute_children(
             )
         } else {
             resolve_absolutely_positioned_replaced_box_properties_horizontal(
-                intrinsic_size.height,
                 known_dimensions.width,
                 area_width,
                 resolved_inset.horizontal_components(),
@@ -1243,12 +1242,12 @@ fn perform_absolute_layout_on_absolute_children(
         } else {
             if style_size.width.is_none() && style_size.height.is_some() {
                 let intrinsic_aspect_ratio = intrinsic_size.width / intrinsic_size.height;
-                let width = resolved_box_properties_vertical.size / intrinsic_aspect_ratio;
-                resolve_absolutely_positioned_non_replaced_box_properties_horizontal(
+                let width = resolved_box_properties_vertical.size * intrinsic_aspect_ratio;
+                resolve_absolutely_positioned_replaced_box_properties_horizontal(
                     Some(width),
                     area_width,
                     resolved_inset.horizontal_components(),
-                    measured_size.width,
+                    intrinsic_size.width,
                     margin.horizontal_components(),
                     item.static_position.x,
                     direction,
@@ -1523,7 +1522,6 @@ fn resolve_absolutely_positioned_non_replaced_box_properties_horizontal(
 #[inline]
 #[allow(clippy::too_many_arguments)]
 fn resolve_absolutely_positioned_replaced_box_properties_horizontal(
-    content_height: f32,
     width: Option<f32>,
     width_of_containing_block: f32,
     inset: Line<Option<f32>>,
@@ -1661,7 +1659,6 @@ fn resolve_absolutely_positioned_replaced_box_properties_horizontal(
         // If the tentative used width is greater than 'max-width', the rules above are applied again,
         // but this time using the computed value of 'max-width' as the computed value for 'width'.
         resolve_absolutely_positioned_replaced_box_properties_horizontal(
-            content_height,
             max_width,
             width_of_containing_block,
             inset,
@@ -1677,7 +1674,6 @@ fn resolve_absolutely_positioned_replaced_box_properties_horizontal(
         // If the resulting width is smaller than 'min-width', the rules above are applied again,
         // but this time using the value of 'min-width' as the computed value for 'width'.
         resolve_absolutely_positioned_replaced_box_properties_horizontal(
-            content_height,
             Some(min_width),
             width_of_containing_block,
             inset,
