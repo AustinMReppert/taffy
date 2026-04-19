@@ -554,6 +554,40 @@ impl Size<f32> {
     pub fn has_non_zero_area(self) -> bool {
         self.width > 0.0 && self.height > 0.0
     }
+
+    /// Encode intrinsic size data.
+    #[inline(always)]
+    pub fn intrinsic(width: Option<f32>, height: Option<f32>, aspect_ratio: Option<f32>) -> Size<f32> {
+        match (width, height, aspect_ratio) {
+            (Some(w), Some(h), _) => Size { width: w, height: h },
+            (Some(w), None, Some(ar)) => Size { width: w, height: -ar },
+            (None, Some(h), Some(ar)) => Size { width: -ar, height: h },
+            (Some(w), None, None) => Size { width: w, height: f32::NAN },
+            (None, Some(h), None) => Size { width: f32::NAN, height: h },
+            (None, None, Some(ar)) => Size { width: -ar, height: f32::NAN },
+            _ => Size { width: f32::NAN, height: f32::NAN },
+        }
+    }
+
+    /// Decode intrinsic size data.
+    pub fn decode_intrinsic_derived(&self) -> (Option<f32>, Option<f32>, Option<f32>) {
+        let width = if self.width.is_finite() && self.width >= 0.0 { Some(self.width) } else { None };
+        let height = if self.height.is_finite() && self.height >= 0.0 { Some(self.height) } else { None };
+
+        let mut aspect_ratio = None;
+
+        if self.width < 0.0 {
+            aspect_ratio = Some(-self.width);
+        } else if self.height < 0.0 {
+            aspect_ratio = Some(-self.height);
+        } else if let (Some(w), Some(h)) = (width, height) {
+            if h != 0.0 {
+                aspect_ratio = Some(w / h);
+            }
+        }
+
+        (width, height, aspect_ratio)
+    }
 }
 
 impl Size<Option<f32>> {

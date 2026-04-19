@@ -163,8 +163,10 @@ fn construct_tree(
 
         let tnode = tree.new_leaf(build_style(input)).unwrap();
         let node_context = if input.has_tag_name("img") {
+            let parse_attr = |name: &str| input.attribute(name).and_then(|s| s.parse::<f32>().ok());
             Some(TestNodeContext::image(
                 input.attribute("src").expect("Image nodes must have a src attribute").to_string(),
+                Size { width: parse_attr("width"), height: parse_attr("height") },
             ))
         } else {
             text_content.map(|text_content| TestNodeContext::ahem_text(text_content.to_string(), writing_mode))

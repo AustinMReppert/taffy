@@ -1181,7 +1181,14 @@ fn perform_absolute_layout_on_absolute_children(
             Line::FALSE,
         );
 
+        println!("=");
         let intrinsic_size = if !replaced { Size::ZERO } else { tree.measure_intrinsic_size(item.node_id) };
+        let (intrinsic_width, intrinsic_height, intrinsic_aspect_ratio) = intrinsic_size.decode_intrinsic_derived();
+
+        println!("Intrinsic width: {:?}", intrinsic_width);
+        println!("Intrinsic height: {:?}", intrinsic_height);
+        println!("Intrinsic aspect ratio: {:?}", intrinsic_aspect_ratio);
+        println!("/=");
 
         let resolved_box_properties_horizontal = if !replaced {
             resolve_absolutely_positioned_non_replaced_box_properties_horizontal(
@@ -1196,11 +1203,16 @@ fn perform_absolute_layout_on_absolute_children(
                 max_size.width,
             )
         } else {
+            println!("a");
             resolve_absolutely_positioned_replaced_box_properties_horizontal(
                 known_dimensions.width,
+                known_dimensions.height,
+                None,
                 area_width,
                 resolved_inset.horizontal_components(),
-                intrinsic_size.width,
+                intrinsic_width,
+                intrinsic_height,
+                intrinsic_aspect_ratio,
                 margin.horizontal_components(),
                 item.static_position.x,
                 direction,
@@ -1224,11 +1236,12 @@ fn perform_absolute_layout_on_absolute_children(
             resolve_absolutely_positioned_replaced_box_properties_vertical(
                 known_dimensions.width,
                 resolved_box_properties_horizontal.size,
-                intrinsic_size.width,
                 known_dimensions.height,
                 area_height,
                 resolved_inset.vertical_components(),
-                intrinsic_size.height,
+                intrinsic_width,
+                intrinsic_height,
+                intrinsic_aspect_ratio,
                 margin.vertical_components(),
                 item.static_position.y,
                 min_size.height.unwrap_or(0.0),
@@ -1236,18 +1249,21 @@ fn perform_absolute_layout_on_absolute_children(
             )
         };
 
-        // This covers if we have an auto-width and a fixed height.
         let resolved_box_properties_horizontal = if !replaced {
             resolved_box_properties_horizontal
         } else {
-            if style_size.width.is_none() && style_size.height.is_some() {
-                let intrinsic_aspect_ratio = intrinsic_size.width / intrinsic_size.height;
-                let width = resolved_box_properties_vertical.size * intrinsic_aspect_ratio;
+            // This covers if we have an auto-width that potentially relies on a fixed/computed height.
+            if style_size.width.is_none() {
+                println!("b");
                 resolve_absolutely_positioned_replaced_box_properties_horizontal(
-                    Some(width),
+                    None,
+                    Some(resolved_box_properties_vertical.size),
+                    Some(resolved_box_properties_vertical.size),
                     area_width,
                     resolved_inset.horizontal_components(),
-                    intrinsic_size.width,
+                    intrinsic_width,
+                    intrinsic_height,
+                    intrinsic_aspect_ratio,
                     margin.horizontal_components(),
                     item.static_position.x,
                     direction,
@@ -1523,9 +1539,13 @@ fn resolve_absolutely_positioned_non_replaced_box_properties_horizontal(
 #[allow(clippy::too_many_arguments)]
 fn resolve_absolutely_positioned_replaced_box_properties_horizontal(
     width: Option<f32>,
+    height: Option<f32>,
+    computed_height: Option<f32>,
     width_of_containing_block: f32,
     inset: Line<Option<f32>>,
-    content_width: f32,
+    intrinsic_width: Option<f32>,
+    intrinsic_height: Option<f32>,
+    intrinsic_aspect_ratio: Option<f32>,
     margin: Line<Option<f32>>,
     static_position: f32,
     direction: Direction,
@@ -1543,7 +1563,70 @@ fn resolve_absolutely_positioned_replaced_box_properties_horizontal(
     // 1.0
     // The used value of 'width' is determined as for inline replaced elements.
     // If 'margin-left' or 'margin-right' is specified as 'auto' its used value is determined by the rules below.
-    let computed_width = width.unwrap_or(content_width);
+    let computed_width = width.unwrap_or_else(|| {
+        println!("step");
+        // 10.3.2 Inline, replaced elements
+
+        if height.is_none() && intrinsic_width.is_some() {
+            println!("step1");
+            // If 'height' and 'width' both have computed values of 'auto' and the element also has
+            // an intrinsic width, then that intrinsic width is the used value of 'width'.
+            return intrinsic_width.unwrap();
+        } else if ((height.is_none() && intrinsic_width.is_none() && intrinsic_height.is_some())
+            || (computed_height.is_some()))
+            && intrinsic_aspect_ratio.is_some()
+        {
+            println!("step2");
+            // If 'height' and 'width' both have computed values of 'auto' and the element has no
+            // intrinsic width, but does have an intrinsic height and intrinsic ratio; or if 'width'
+            // has a computed value of 'auto', 'height' has some other computed value, and the element
+            // does have an intrinsic ratio; then the used value of 'width' is: (used height) * (intrinsic ratio)
+            println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+            let used_height = if height.is_none() && intrinsic_width.is_none() && intrinsic_height.is_some() {
+                intrinsic_height.unwrap()
+            } else {
+                computed_height.unwrap()
+            };
+            println!("used height: {}", used_height);
+            return used_height * intrinsic_aspect_ratio.unwrap();
+        } else if height.is_none()
+            && intrinsic_width.is_none()
+            && intrinsic_height.is_none()
+            && intrinsic_aspect_ratio.is_some()
+        {
+            println!("step3");
+            // If 'height' and 'width' both have computed values of 'auto' and the element has an
+            // intrinsic ratio but no intrinsic height or width, then the used value of 'width' is
+            // undefined in CSS 2.1. However, it is suggested that, if the containing block's
+            // width does not itself depend on the replaced element's width, then the used value of
+            // 'width' is calculated from the constraint equation used for block-level, non-replaced elements in normal flow.
+            // TODO: How do we check for cycles here?
+            resolve_absolutely_positioned_non_replaced_box_properties_horizontal(
+                None,
+                width_of_containing_block,
+                inset,
+                width_of_containing_block,
+                margin,
+                static_position,
+                direction,
+                min_width,
+                max_width,
+            )
+            .size
+        } else if intrinsic_width.is_some() {
+            println!("step5");
+            // Otherwise, if 'width' has a computed value of 'auto', and the element has an intrinsic width,
+            // then that intrinsic width is the used value of 'width'.
+            return intrinsic_width.unwrap();
+        } else {
+            println!("step6");
+            // Otherwise, if 'width' has a computed value of 'auto', but none of the conditions above are met,
+            // then the used value of 'width' becomes 300px. If 300px is too wide to fit the device,
+            // UAs should use the width of the largest rectangle that has a 2:1 ratio and fits the device instead.
+            300.0
+            // TODO: handle device < 300px
+        }
+    });
 
     // 2.0
     // If both 'left' and 'right' have the value 'auto', then if the 'direction' property of the
@@ -1660,9 +1743,13 @@ fn resolve_absolutely_positioned_replaced_box_properties_horizontal(
         // but this time using the computed value of 'max-width' as the computed value for 'width'.
         resolve_absolutely_positioned_replaced_box_properties_horizontal(
             max_width,
+            height,
+            computed_height,
             width_of_containing_block,
             inset,
-            content_width,
+            intrinsic_width,
+            intrinsic_height,
+            intrinsic_aspect_ratio,
             margin,
             static_position,
             direction,
@@ -1675,9 +1762,13 @@ fn resolve_absolutely_positioned_replaced_box_properties_horizontal(
         // but this time using the value of 'min-width' as the computed value for 'width'.
         resolve_absolutely_positioned_replaced_box_properties_horizontal(
             Some(min_width),
+            height,
+            computed_height,
             width_of_containing_block,
             inset,
-            content_width,
+            intrinsic_width,
+            intrinsic_height,
+            intrinsic_aspect_ratio,
             margin,
             static_position,
             direction,
@@ -1696,11 +1787,12 @@ fn resolve_absolutely_positioned_replaced_box_properties_horizontal(
 fn resolve_absolutely_positioned_replaced_box_properties_vertical(
     width: Option<f32>,
     computed_width: f32,
-    content_width: f32,
     height: Option<f32>,
     height_of_containing_block: f32,
     inset: Line<Option<f32>>,
-    content_height: f32,
+    intrinsic_width: Option<f32>,
+    intrinsic_height: Option<f32>,
+    intrinsic_aspect_ratio: Option<f32>,
     margin: Line<Option<f32>>,
     static_position: f32,
     min_height: f32,
@@ -1718,11 +1810,34 @@ fn resolve_absolutely_positioned_replaced_box_properties_vertical(
     // The used value of 'height' is determined as for inline replaced elements. If 'margin-top'
     // or 'margin-bottom' is specified as 'auto' its used value is determined by the rules below.
     let computed_height = height.unwrap_or_else(|| {
-        if width.is_none() {
-            content_height
+        println!("_step");
+        // 10.6.2 Inline replaced elements, block-level replaced elements in normal flow,
+        // 'inline-block' replaced elements in normal flow and floating replaced elements
+
+        if width.is_none() && intrinsic_height.is_some() {
+            println!("_step1");
+            // If 'height' and 'width' both have computed values of 'auto' and the element also has
+            // an intrinsic height, then that intrinsic height is the used value of 'height'.
+            return intrinsic_height.unwrap();
+        } else if intrinsic_aspect_ratio.is_some() {
+            println!("_step2");
+            // Otherwise, if 'height' has a computed value of 'auto', and the element has an intrinsic
+            // ratio then the used value of 'height' is: (used width) / (intrinsic ratio)
+            println!("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+            println!("used width: {}", computed_width);
+            return computed_width / intrinsic_aspect_ratio.unwrap();
+        } else if intrinsic_height.is_some() {
+            println!("_step3");
+            // Otherwise, if 'height' has a computed value of 'auto', and the element has an intrinsic height,
+            // then that intrinsic height is the used value of 'height'.
+            intrinsic_height.unwrap()
         } else {
-            let intrinsic_ratio = content_width / content_height;
-            computed_width / intrinsic_ratio
+            println!("step6");
+            // Otherwise, if 'height' has a computed value of 'auto', but none of the conditions above are met,
+            // then the used value of 'height' must be set to the height of the largest rectangle that
+            // has a 2:1 ratio, has a height not greater than 150px, and has a width not greater than the device width.
+            150.0
+            // TODO: handle device < 150px
         }
     });
 
@@ -1805,11 +1920,12 @@ fn resolve_absolutely_positioned_replaced_box_properties_vertical(
         resolve_absolutely_positioned_replaced_box_properties_vertical(
             width,
             computed_width,
-            content_width,
             max_height,
             height_of_containing_block,
             inset,
-            content_height,
+            intrinsic_width,
+            intrinsic_height,
+            intrinsic_aspect_ratio,
             margin,
             static_position,
             min_height,
@@ -1822,11 +1938,12 @@ fn resolve_absolutely_positioned_replaced_box_properties_vertical(
         resolve_absolutely_positioned_replaced_box_properties_vertical(
             width,
             computed_width,
-            content_width,
             Some(min_height),
             height_of_containing_block,
             inset,
-            content_height,
+            intrinsic_width,
+            intrinsic_height,
+            intrinsic_aspect_ratio,
             margin,
             static_position,
             min_height,

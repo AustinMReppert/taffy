@@ -265,6 +265,12 @@ fn generate_node(w: &mut XmlWriter, node: &Value) {
         if let Some(src) = get_string_value(&node["src"]) {
             w.write_attribute("src", src);
         }
+        if let Some(width) = get_string_value(&node["width"]) {
+            w.write_attribute("width", width);
+        }
+        if let Some(width) = get_string_value(&node["height"]) {
+            w.write_attribute("height", width);
+        }
     } else if text_content.is_some() {
         w.start_element("text");
     } else {

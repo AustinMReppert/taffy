@@ -207,6 +207,8 @@ function describeElement(e) {
     nodeName: e.tagName.toLowerCase(),
     ...(isImg && {
       src: e.getAttribute("src"),
+      ...(e.hasAttribute("width") && { width: e.getAttribute("width") }),
+      ...(e.hasAttribute("height") && { height: e.getAttribute("height") }),
     }),
     style: {
       display: parseEnum(e.style.display),

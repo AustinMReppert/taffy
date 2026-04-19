@@ -11,3 +11,4 @@ publish = false
 [dependencies]
 taffy = { path = "../.." }
 image = "0.25.10"
+usvg = "0.47.0"

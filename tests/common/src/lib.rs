@@ -1,5 +1,6 @@
 use std::path::Path;
 use taffy::{AvailableSpace, NodeId, Size, Style, TaffyTree};
+use usvg::{Options, Tree};
 
 /// Creates a `TaffyTree` that uses `TestNodeContext`. The purpose of this function is
 /// to allow `TaffyTree` to be monomophised once in this crate rather than separately for
@@ -47,8 +48,8 @@ impl TestNodeContext {
     }
 
     /// Create a `TestNodeContext` for a node with image data.
-    pub const fn image(path: String) -> Self {
-        Self::new(TestMeasureData::Image(path))
+    pub const fn image(path: String, size: Size<Option<f32>>) -> Self {
+        Self::new(TestMeasureData::Image(path, size))
     }
 }
 
@@ -64,7 +65,7 @@ pub enum TestMeasureData {
     /// A node with text using the Ahem font
     AhemText(AhemTextMeasureData),
     /// An image node.
-    Image(String),
+    Image(String, Size<Option<f32>>),
 }
 
 /// A measure function for tests that works with `TestNodeContext`
@@ -78,7 +79,7 @@ pub fn test_measure_function(
     let Some(context) = context else { return known_dimensions.map(|d| d.unwrap_or(0.0)) };
 
     match &context.measure_data {
-        TestMeasureData::Image(path) => return measure_image(&path, known_dimensions, available_space),
+        TestMeasureData::Image(path, size) => return measure_image(&path, known_dimensions, available_space, *size),
         _ => {}
     };
 
@@ -94,7 +95,7 @@ pub fn test_measure_function(
         TestMeasureData::Fixed(size) => *size,
         TestMeasureData::AspectRatio(data) => data.measure(known_dimensions),
         TestMeasureData::AhemText(data) => data.measure(known_dimensions, available_space),
-        TestMeasureData::Image(_) => unreachable!(),
+        TestMeasureData::Image(_, _) => unreachable!(),
     };
 
     Size {
@@ -107,7 +108,12 @@ fn measure_image(
     path: &str,
     _known_dimensions: Size<Option<f32>>,
     _available_space: Size<AvailableSpace>,
+    size: Size<Option<f32>>,
 ) -> Size<f32> {
+    if size.both_axis_defined() {
+        return size.map(Option::unwrap);
+    }
+
     let filename = Path::new(path).file_name().expect("Invalid image path");
     let full_path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -119,9 +125,21 @@ fn measure_image(
         .join(filename);
     println!("{}", full_path.display());
 
-    let image = image::open(full_path).expect("Failed to open image");
-    println!("Image size: {} x {}", image.width(), image.height());
-    Size { width: image.width() as f32, height: image.height() as f32 }
+    if filename.to_string_lossy().ends_with(".svg") {
+        let svg_data = std::fs::read(full_path).expect("Failed to read SVG file");
+        let options = Options::default();
+        let tree = Tree::from_data(&svg_data, &options).expect("Failed to parse SVG");
+        let aspect_ratio = tree.size().width() / tree.size().height();
+        Size::intrinsic(size.width, size.height, Some(aspect_ratio))
+    } else {
+        let image = image::open(full_path).expect("Failed to open image");
+        let aspect_ratio = (image.height() as f32) / (image.width() as f32);
+        Size::intrinsic(
+            size.width.or(Some(image.width() as f32)),
+            size.height.or(Some(image.height() as f32)),
+            Some(aspect_ratio),
+        )
+    }
 }
 
 /// Measure data for nodes that returns results based on an intrinsic aspect ratio
