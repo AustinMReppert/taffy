@@ -32,13 +32,13 @@ pub enum AlignItems {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(AlignItems,
-    "start" => Start,
-    "end" => End,
-    "flex-start" => FlexStart,
-    "flex-end" => FlexEnd,
-    "center" => Center,
-    "baseline" => Baseline,
-    "stretch" => Stretch,
+    "start" => Self::Start,
+    "end" => Self::End,
+    "flex-start" => Self::FlexStart,
+    "flex-end" => Self::FlexEnd,
+    "center" => Self::Center,
+    "baseline" => Self::Baseline,
+    "stretch" => Self::Stretch,
 );
 
 /// Used to control how child nodes are aligned.
@@ -103,15 +103,15 @@ pub enum AlignContent {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(AlignContent,
-    "start" => Start,
-    "end" => End,
-    "flex-start" => FlexStart,
-    "flex-end" => FlexEnd,
-    "center" => Center,
-    "stretch" => Stretch,
-    "space-between" => SpaceBetween,
-    "space-evenly" => SpaceEvenly,
-    "space-around" => SpaceAround,
+    "start" => Self::Start,
+    "end" => Self::End,
+    "flex-start" => Self::FlexStart,
+    "flex-end" => Self::FlexEnd,
+    "center" => Self::Center,
+    "stretch" => Self::Stretch,
+    "space-between" => Self::SpaceBetween,
+    "space-evenly" => Self::SpaceEvenly,
+    "space-around" => Self::SpaceAround,
 );
 
 impl AlignContent {

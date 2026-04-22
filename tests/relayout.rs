@@ -67,7 +67,7 @@ fn toggle_root_display_none() {
     };
 
     let flex_style = Style {
-        display: Display::Flex,
+        display: Display::FLEX,
         size: Size { width: length(100.0), height: length(100.0) },
         ..Default::default()
     };
@@ -147,7 +147,7 @@ fn toggle_flex_child_display_none() {
     };
 
     let flex_style = Style {
-        display: Display::Flex,
+        display: Display::FLEX,
         size: Size { width: length(100.0), height: length(100.0) },
         ..Default::default()
     };
@@ -193,7 +193,7 @@ fn toggle_flex_container_display_none() {
     };
 
     let flex_style = Style {
-        display: Display::Flex,
+        display: Display::FLEX,
         size: Size { width: length(100.0), height: length(100.0) },
         ..Default::default()
     };
@@ -239,7 +239,7 @@ fn toggle_grid_child_display_none() {
     };
 
     let grid_style = Style {
-        display: Display::Grid,
+        display: Display::GRID,
         size: Size { width: length(100.0), height: length(100.0) },
         ..Default::default()
     };
@@ -285,7 +285,7 @@ fn toggle_grid_container_display_none() {
     };
 
     let grid_style = Style {
-        display: Display::Grid,
+        display: Display::GRID,
         size: Size { width: length(100.0), height: length(100.0) },
         ..Default::default()
     };

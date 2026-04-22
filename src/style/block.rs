@@ -50,8 +50,8 @@ pub enum TextAlign {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(TextAlign,
-    "auto" => Auto,
-    "-webkit-left" => LegacyLeft,
-    "-webkit-right" => LegacyRight,
-    "-webkit-center" => LegacyCenter,
+    "auto" => Self::Auto,
+    "-webkit-left" => Self::LegacyLeft,
+    "-webkit-right" => Self::LegacyRight,
+    "-webkit-center" => Self::LegacyCenter,
 );

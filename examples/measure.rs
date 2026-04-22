@@ -47,7 +47,7 @@ fn main() -> Result<(), taffy::TaffyError> {
 
     let root = taffy.new_with_children(
         Style {
-            display: Display::Flex,
+            display: Display::FLEX,
             flex_direction: FlexDirection::Column,
             size: Size { width: length(200.0), height: auto() },
             ..Default::default()

@@ -9,7 +9,7 @@ pub(crate) trait CreateParentTestNode {
 impl CreateParentTestNode for (f32, f32, i32, i32) {
     fn into_grid(self) -> Style {
         Style {
-            display: Display::Grid,
+            display: Display::GRID,
             size: Size { width: Dimension::from_length(self.0), height: Dimension::from_length(self.1) },
             grid_template_columns: vec![fr(1f32); self.2 as usize],
             grid_template_rows: vec![fr(1f32); self.3 as usize],
@@ -25,7 +25,7 @@ impl CreateChildTestNode
 {
     fn into_grid_child(self) -> Style<String> {
         Style {
-            display: Display::Grid,
+            display: Display::GRID,
             grid_column: Line { start: self.0, end: self.1 },
             grid_row: Line { start: self.2, end: self.3 },
             ..Default::default()

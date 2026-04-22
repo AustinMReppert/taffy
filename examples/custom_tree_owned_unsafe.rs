@@ -52,19 +52,19 @@ impl Node {
     pub fn new_row(style: Style) -> Node {
         Node {
             kind: NodeKind::Flexbox,
-            style: Style { display: Display::Flex, flex_direction: FlexDirection::Row, ..style },
+            style: Style { display: Display::FLEX, flex_direction: FlexDirection::Row, ..style },
             ..Node::default()
         }
     }
     pub fn new_column(style: Style) -> Node {
         Node {
             kind: NodeKind::Flexbox,
-            style: Style { display: Display::Flex, flex_direction: FlexDirection::Column, ..style },
+            style: Style { display: Display::FLEX, flex_direction: FlexDirection::Column, ..style },
             ..Node::default()
         }
     }
     pub fn new_grid(style: Style) -> Node {
-        Node { kind: NodeKind::Grid, style: Style { display: Display::Grid, ..style }, ..Node::default() }
+        Node { kind: NodeKind::Grid, style: Style { display: Display::GRID, ..style }, ..Node::default() }
     }
     pub fn new_text(style: Style, text_data: TextContext) -> Node {
         Node { kind: NodeKind::Text, style, text_data: Some(text_data), ..Node::default() }

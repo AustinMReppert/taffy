@@ -388,7 +388,7 @@ mod test {
     fn explicit_grid_sizing_auto_fill_exact_fit() {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             size: Size { width: length(120.0), height: length(80.0) },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
@@ -419,7 +419,7 @@ mod test {
     fn explicit_grid_sizing_auto_fill_non_exact_fit() {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             size: Size { width: length(140.0), height: length(90.0) },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
@@ -450,7 +450,7 @@ mod test {
     fn explicit_grid_sizing_auto_fill_min_size_exact_fit() {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             min_size: Size { width: length(120.0), height: length(80.0) },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
@@ -481,7 +481,7 @@ mod test {
     fn explicit_grid_sizing_auto_fill_min_size_non_exact_fit() {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             min_size: Size { width: length(140.0), height: length(90.0) },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
@@ -512,7 +512,7 @@ mod test {
     fn explicit_grid_sizing_auto_fill_multiple_repeated_tracks() {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             size: Size { width: length(140.0), height: length(100.0) },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0), length(20.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0), length(10.0)])],
@@ -543,7 +543,7 @@ mod test {
     fn explicit_grid_sizing_auto_fill_gap() {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             size: Size { width: length(140.0), height: length(100.0) },
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
@@ -575,7 +575,7 @@ mod test {
     fn explicit_grid_sizing_no_defined_size() {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             grid_template_columns: vec![repeat(AutoFill, vec![length(40.0), percent(0.5), length(20.0)])],
             grid_template_rows: vec![repeat(AutoFill, vec![length(20.0)])],
             gap: length(20.0),
@@ -606,7 +606,7 @@ mod test {
     fn explicit_grid_sizing_mix_repeated_and_non_repeated() {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             size: Size { width: length(140.0), height: length(100.0) },
             grid_template_columns: vec![length(20.0), repeat(AutoFill, vec![length(40.0)])],
             grid_template_rows: vec![length(40.0), repeat(AutoFill, vec![length(20.0)])],
@@ -638,7 +638,7 @@ mod test {
     fn explicit_grid_sizing_mix_with_padding() {
         use RepetitionCount::AutoFill;
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             size: Size { width: length(120.0), height: length(120.0) },
             padding: Rect { left: length(10.0), right: length(10.0), top: length(20.0), bottom: length(20.0) },
             grid_template_columns: vec![repeat(AutoFill, vec![length(20.0)])],
@@ -678,7 +678,7 @@ mod test {
 
         // Setup test
         let grid_style: Style<DefaultCheapStr> = Style {
-            display: Display::Grid,
+            display: Display::GRID,
             gap: length(20.0),
             grid_template_columns: vec![length(100.0), minmax(length(100.0), fr(2.0)), fr(1.0)],
             grid_auto_columns: vec![auto(), length(100.0)],

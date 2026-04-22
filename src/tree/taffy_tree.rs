@@ -20,7 +20,7 @@ use crate::util::sys::{new_vec_with_capacity, ChildrenVec, Vec};
 use crate::compute::{
     compute_cached_layout, compute_hidden_layout, compute_leaf_layout, compute_root_layout, round_layout,
 };
-use crate::CacheTree;
+use crate::{CacheTree, DisplayInside, DisplayOutside};
 
 #[cfg(feature = "block_layout")]
 use crate::{compute::compute_block_layout, LayoutBlockContainer};
@@ -33,6 +33,7 @@ use crate::{compute::compute_grid_layout, LayoutGridContainer};
 use crate::compute::grid::DetailedGridInfo;
 #[cfg(feature = "detailed_layout_info")]
 use crate::tree::layout::DetailedLayoutInfo;
+use crate::Display::OutsideInside;
 
 /// The error Taffy generates on invalid operations
 pub type TaffyResult<T> = Result<T, TaffyError>;
@@ -230,22 +231,19 @@ impl<NodeContext> PrintTree for TaffyTree<NodeContext> {
         let node = &self.nodes[node_id.into()];
         let display = node.style.display;
         let num_children = self.child_count(node_id);
-
         match (num_children, display) {
             (_, Display::None) => "NONE",
             (0, _) => "LEAF",
-            #[cfg(feature = "block_layout")]
-            (_, Display::Block) => "BLOCK",
-            #[cfg(feature = "flexbox")]
-            (_, Display::Flex) => {
-                use crate::FlexDirection;
-                match node.style.flex_direction {
-                    FlexDirection::Row | FlexDirection::RowReverse => "FLEX ROW",
-                    FlexDirection::Column | FlexDirection::ColumnReverse => "FLEX COL",
-                }
-            }
-            #[cfg(feature = "grid")]
-            (_, Display::Grid) => "GRID",
+            (_, OutsideInside(outside, inside)) => match (outside, inside) {
+                (DisplayOutside::Block, DisplayInside::Flex) => "BLOCK FLEX",
+                (DisplayOutside::Inline, DisplayInside::Flex) => "INLINE FLEX",
+                (DisplayOutside::Block, DisplayInside::Grid) => "BLOCK GRID",
+                (DisplayOutside::Inline, DisplayInside::Grid) => "INLINE GRID",
+                (DisplayOutside::Block, DisplayInside::Flow) => "BLOCK FLOW",
+                (DisplayOutside::Inline, DisplayInside::Flow) => "INLINE FLOW",
+                (DisplayOutside::Block, DisplayInside::FlowRoot) => "FLOW ROOT",
+                _ => "BLOCK",
+            },
         }
     }
 
@@ -309,13 +307,17 @@ where
             // Dispatch to a layout algorithm based on the node's display style and whether the node has children or not.
             match (display_mode, has_children) {
                 (Display::None, _) => compute_hidden_layout(tree, node_id),
-                #[cfg(feature = "block_layout")]
-                (Display::Block, true) => compute_block_layout(tree, node_id, inputs, block_ctx),
-                #[cfg(feature = "flexbox")]
-                (Display::Flex, true) => compute_flexbox_layout(tree, node_id, inputs),
-                #[cfg(feature = "grid")]
-                (Display::Grid, true) => compute_grid_layout(tree, node_id, inputs),
-                (_, false) => {
+                (OutsideInside(_outside, inside), true) => match inside {
+                    #[cfg(feature = "flexbox")]
+                    DisplayInside::Flex => compute_flexbox_layout(tree, node_id, inputs),
+                    #[cfg(feature = "grid")]
+                    DisplayInside::Grid => compute_grid_layout(tree, node_id, inputs),
+                    #[cfg(feature = "block_layout")]
+                    DisplayInside::Flow | DisplayInside::FlowRoot => {
+                        compute_block_layout(tree, node_id, inputs, block_ctx)
+                    }
+                },
+                (OutsideInside(_, _), false) => {
                     let node_key = node_id.into();
                     let style = &tree.taffy.nodes[node_key].style;
                     let has_context = tree.taffy.nodes[node_key].has_context;
@@ -1295,7 +1297,7 @@ mod tests {
         let mut taffy: TaffyTree<()> = TaffyTree::new();
 
         let node = taffy.new_leaf(Style::default()).unwrap();
-        assert_eq!(taffy.style(node).unwrap().display, Display::Flex);
+        assert_eq!(taffy.style(node).unwrap().display, Display::FLEX);
 
         taffy.set_style(node, Style { display: Display::None, ..Style::default() }).unwrap();
         assert_eq!(taffy.style(node).unwrap().display, Display::None);

@@ -87,9 +87,9 @@ pub enum FlexWrap {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(FlexWrap,
-    "nowrap" => NoWrap,
-    "wrap" => Wrap,
-    "wrap-reverse" => WrapReverse,
+    "nowrap" => Self::NoWrap,
+    "wrap" => Self::Wrap,
+    "wrap-reverse" => Self::WrapReverse,
 );
 
 /// The direction of the flexbox layout main axis.
@@ -127,10 +127,10 @@ pub enum FlexDirection {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(FlexDirection,
-    "row" => Row,
-    "column" => Column,
-    "row-reverse" => RowReverse,
-    "column-reverse" => ColumnReverse,
+    "row" => Self::Row,
+    "column" => Self::Column,
+    "row-reverse" => Self::RowReverse,
+    "column-reverse" => Self::ColumnReverse,
 );
 
 impl FlexDirection {

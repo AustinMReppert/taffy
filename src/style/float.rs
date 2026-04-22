@@ -18,9 +18,9 @@ pub enum Float {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(Float,
-    "left" => Left,
-    "right" => Right,
-    "none" => None,
+    "left" => Self::Left,
+    "right" => Self::Right,
+    "none" => Self::None,
 );
 
 /// Whether a box that is definitely floated is floated to the left
@@ -73,8 +73,8 @@ pub enum Clear {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(Clear,
-    "left" => Left,
-    "right" => Right,
-    "both" => Both,
-    "none" => None,
+    "left" => Self::Left,
+    "right" => Self::Right,
+    "both" => Self::Both,
+    "none" => Self::None,
 );

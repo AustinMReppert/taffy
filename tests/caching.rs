@@ -26,7 +26,7 @@ mod caching {
     fn measure_count_grid() {
         let mut taffy = new_test_tree();
 
-        let style = || Style { display: Display::Grid, ..Default::default() };
+        let style = || Style { display: Display::GRID, ..Default::default() };
         let leaf = taffy.new_leaf_with_context(style(), NODE_CONTEXT).unwrap();
 
         let mut node = taffy.new_with_children(Style::DEFAULT, &[leaf]).unwrap();

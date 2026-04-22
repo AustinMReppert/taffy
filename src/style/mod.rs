@@ -180,21 +180,51 @@ pub trait CoreStyle {
     }
 }
 
-/// Sets the layout used for the children of this node
-///
-/// The default values depends on on which feature flags are enabled. The order of precedence is: Flex, Grid, Block, None.
+/// Sets the layout used for the children of this node .
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum Display {
-    /// The children will follow the block layout algorithm
-    #[cfg(feature = "block_layout")]
+pub enum DisplayOutside {
+    /// The element generates a block element box, generating line breaks both before and after the element when in the normal flow.
     Block,
+    /// The element generates one or more inline element boxes that do not generate line breaks before or after themselves.
+    /// In normal flow, the next element will be on the same line if there is space.
+    Inline,
+}
+
+/// Sets the layout used for the children of this node
+///
+/// The default values depends on which feature flags are enabled. The order of precedence is: Flex, Grid, Block, None.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DisplayInside {
+    /// The element generates a block element box that establishes a new block formatting context, defining where the formatting root lies.
+    FlowRoot,
+    /// The element lays out its contents using flow layout (block-and-inline layout).
+    ///
+    /// If its outer display type is inline, and it is participating in a block or inline formatting context,
+    /// then it generates an inline box. Otherwise it generates a block container box.
+    ///
+    /// Depending on the value of other properties (such as position, float, or overflow) and whether
+    /// it is itself participating in a block or inline formatting context, it either establishes a
+    /// new block formatting context (BFC) for its contents or integrates its contents into its parent
+    /// formatting context.
+    Flow,
     /// The children will follow the flexbox layout algorithm
     #[cfg(feature = "flexbox")]
     Flex,
     /// The children will follow the CSS Grid layout algorithm
     #[cfg(feature = "grid")]
     Grid,
+}
+
+/// Sets the layout used for the children of this node
+///
+/// The default values depends on which feature flags are enabled. The order of precedence is: Flex, Grid, Block, None.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum Display {
+    /// Layout the node according the `DisplayOutside` and `DisplayInside`.
+    OutsideInside(DisplayOutside, DisplayInside),
     /// The node is hidden, and it's children will also be hidden
     None,
 }
@@ -202,19 +232,31 @@ pub enum Display {
 impl Display {
     /// The default Display mode
     #[cfg(feature = "flexbox")]
-    pub const DEFAULT: Display = Display::Flex;
+    pub const DEFAULT: Display = Display::OutsideInside(DisplayOutside::Block, DisplayInside::Flex);
 
     /// The default Display mode
     #[cfg(all(feature = "grid", not(feature = "flexbox")))]
-    pub const DEFAULT: Display = Display::Grid;
+    pub const DEFAULT: Display = Display::OutsideInside(DisplayOutside::Block, DisplayInside::Grid);
 
     /// The default Display mode
     #[cfg(all(feature = "block_layout", not(feature = "flexbox"), not(feature = "grid")))]
-    pub const DEFAULT: Display = Display::Block;
+    pub const DEFAULT: Display = Display::OutsideInside(DisplayOutside::Block, DisplayInside::Flow);
 
     /// The default Display mode
     #[cfg(all(not(feature = "flexbox"), not(feature = "grid"), not(feature = "block_layout")))]
     pub const DEFAULT: Display = Display::None;
+
+    /// display: grid shorthand
+    #[cfg(feature = "grid")]
+    pub const GRID: Display = Display::OutsideInside(DisplayOutside::Block, DisplayInside::Grid);
+
+    /// display: flex shorthand
+    #[cfg(feature = "flexbox")]
+    pub const FLEX: Display = Display::OutsideInside(DisplayOutside::Block, DisplayInside::Flex);
+
+    /// display: block shorthand
+    #[cfg(feature = "block_layout")]
+    pub const BLOCK: Display = Display::OutsideInside(DisplayOutside::Block, DisplayInside::Flow);
 }
 
 impl Default for Display {
@@ -225,25 +267,44 @@ impl Default for Display {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(Display,
-    "none" => None,
+    "none" => Display::None,
     #[cfg(feature = "flexbox")]
-    "flex" => Flex,
+    "flex" => Display::OutsideInside(DisplayOutside::Block, DisplayInside::Flex),
     #[cfg(feature = "grid")]
-    "grid" => Grid,
+    "grid" => Display::OutsideInside(DisplayOutside::Block, DisplayInside::Grid),
     #[cfg(feature = "block_layout")]
-    "block" => Block,
+    "block" => Display::OutsideInside(DisplayOutside::Block, DisplayInside::Flow),
 );
+
+impl core::fmt::Display for DisplayOutside {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Block => write!(f, "block"),
+            Self::Inline => write!(f, "inline"),
+        }
+    }
+}
+
+impl core::fmt::Display for DisplayInside {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::FlowRoot => write!(f, "flow-root"),
+            Self::Flow => write!(f, "flow"),
+            #[cfg(feature = "flexbox")]
+            Self::Flex => write!(f, "flex"),
+            #[cfg(feature = "grid")]
+            Self::Grid => write!(f, "grid"),
+        }
+    }
+}
 
 impl core::fmt::Display for Display {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Display::None => write!(f, "NONE"),
-            #[cfg(feature = "block_layout")]
-            Display::Block => write!(f, "BLOCK"),
-            #[cfg(feature = "flexbox")]
-            Display::Flex => write!(f, "FLEX"),
-            #[cfg(feature = "grid")]
-            Display::Grid => write!(f, "GRID"),
+            Self::None => write!(f, "none"),
+            Self::OutsideInside(outside, inside) => {
+                write!(f, "{} {}", outside, inside)
+            }
         }
     }
 }
@@ -296,8 +357,8 @@ pub enum Position {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(Position,
-    "relative" => Relative,
-    "absolute" => Absolute,
+    "relative" => Self::Relative,
+    "absolute" => Self::Absolute,
 );
 
 /// Specifies whether size styles for this node are assigned to the node's "content box" or "border box"
@@ -325,8 +386,8 @@ pub enum BoxSizing {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(BoxSizing,
-    "border-box" => BorderBox,
-    "content-box" => ContentBox,
+    "border-box" => Self::BorderBox,
+    "content-box" => Self::ContentBox,
 );
 
 /// How children overflowing their container should affect layout
@@ -385,10 +446,10 @@ impl Overflow {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(Overflow,
-    "visible" => Visible,
-    "hidden" => Hidden,
-    "clip" => Clip,
-    "scroll" => Scroll,
+    "visible" => Self::Visible,
+    "hidden" => Self::Hidden,
+    "clip" => Self::Clip,
+    "scroll" => Self::Scroll,
 );
 
 /// Sets the direction of text, table and grid columns, and horizontal overflow.
@@ -413,8 +474,8 @@ impl Direction {
 
 #[cfg(feature = "parse")]
 crate::util::parse::impl_parse_for_keyword_enum!(Direction,
-    "ltr" => Ltr,
-    "rtl" => Rtl,
+    "ltr" => Self::Ltr,
+    "rtl" => Self::Rtl,
 );
 
 /// A typed representation of the CSS style information for a single node.
@@ -688,7 +749,7 @@ impl<S: CheapCloneStr> CoreStyle for Style<S> {
     #[inline(always)]
     #[cfg(feature = "block_layout")]
     fn is_block(&self) -> bool {
-        matches!(self.display, Display::Block)
+        matches!(self.display, Display::OutsideInside(DisplayOutside::Block, DisplayInside::Flow))
     }
     #[inline(always)]
     fn is_compressible_replaced(&self) -> bool {
@@ -1308,7 +1369,7 @@ mod tests {
         }
 
         // Display and Position
-        assert_type_size::<Display>(1);
+        assert_type_size::<Display>(2);
         assert_type_size::<BoxSizing>(1);
         assert_type_size::<Position>(1);
         assert_type_size::<Overflow>(1);

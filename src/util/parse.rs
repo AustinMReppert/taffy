@@ -66,38 +66,23 @@ pub(crate) use from_str_from_css;
 /// Implements the `FromCss` and `FromStr` traits for a simple enum that consists of just keywords
 macro_rules! impl_parse_for_keyword_enum {
     (
-        // The type name (followed by a comma)
         $ty:ident,
-
-        // Repeat 1-or-more times
         $(
-            // 0-or-more metadata attributes (e.g. #[cfg] attributes for conditional compilation)
             $( #[$meta: meta] )*
-
-            // keyword => enum_variant (e.g. "center" => AlignItems::Center)
-            $keyword:literal => $enum_variant:ident,
+            $keyword:literal => $enum_variant:expr,
         )+
     ) => {
 
         // Impl FromCss for the type
         impl $crate::util::parse::FromCss for $ty {
             fn from_css<'i>(input: &mut cssparser::Parser<'i, '_>) -> $crate::util::parse::CssParseResult<'i, Self> {
-
-                // Parse an ident (or return an error)
                 let ident = input.expect_ident()?;
 
-                // Match on the ident (case insensitive)
                 cssparser::match_ignore_ascii_case! { &*ident,
-
-                    // Define each item in the macro definition as a match case
                     $(
-                        // Add the metadata attributes to the match case
                         $( #[$meta] )*
-                        // If the keyword matches, return the corresponding variant of the enum
-                        $keyword => return Ok(Self::$enum_variant),
+                        $keyword => return Ok($enum_variant),
                     )+
-
-                    // If none of the cases match the input, return an "unexpected token" error
                     _ => {
                         let ident = ident.clone();
                         Err(input.new_unexpected_token_error(cssparser::Token::Ident(ident)))
